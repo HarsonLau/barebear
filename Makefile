@@ -8,6 +8,7 @@ CDEFS=-DPRINTF_DISABLE_SUPPORT_FLOAT
 
 LIBC=$(wildcard lib/*.c)
 SRCS?=$(wildcard src/*.S)
+BENCHC=$(wildcard bench/*.c)
 LIBO=$(addprefix build/, $(LIBC:c=o))
 SRCO=$(addprefix build/, $(SRCS:S=o))
 
@@ -42,3 +43,11 @@ clean:
 
 %.elf: %
 	$(TOOLCHAIN)readelf -e $< > $@
+
+read_csr:$(LIBC) $(BENCHC)
+	 podman run -it --rm -v ./:/root/barebear chipyard-slim bash -c "cd /root/barebear && riscv64-unknown-elf-gcc -march=rv64g -mabi=lp64 -mcmodel=medany \
+    -I. -O3 -nostdlib -nostartfiles -Tlink.ld \
+    -DPRINTF_DISABLE_SUPPORT_FLOAT -DBAREBEAR_DISABLE_FS \
+    -o readcsr_bm readcsr_bm.c bench/*.c lib/crt.S lib/*.c "
+run_csr:runcsr.c
+	podman run -it --rm -v ./:/root/barebear chipyard-slim bash -c "cd /root/barebear && riscv64-unknown-linux-gnu-gcc -O3 -o runcsr runcsr.c"
