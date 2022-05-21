@@ -1,4 +1,5 @@
 import argparse
+from importlib.util import find_spec
 import os
 import json
 import matplotlib
@@ -39,12 +40,26 @@ def calc_br_misp_rate(hpm0, hpm1):
     br = hpm1[2] - hpm0[2]
     br_misp = hpm1[5] - hpm0[5]
     return br_misp / br
+def calc_tage_misp_rate(hpm0, hpm1):
+    br = hpm1[2] - hpm0[2]
+    tage_misp = hpm1[13] - hpm0[13]
+    return tage_misp / br
 
 
 def calc_br_mpki(hpm0, hpm1):
     instret = hpm1[1] - hpm0[1]
     br_misp = hpm1[5] - hpm0[5]
     return br_misp / instret * 1000
+
+def calc_tage_mpki(hpm0,hpm1):
+    instret = hpm1[1] - hpm0[1]
+    tage_misp = hpm1[13]-hpm0[13]
+    return tage_misp/instret*1000
+
+def calc_tage_hit_rate(hpm0,hpm1):
+    br = hpm1[2] - hpm0[2]
+    tage_hit = hpm1[12]-hpm0[12]
+    return tage_hit/br
 
 
 def parse_file(f):
@@ -54,6 +69,10 @@ def parse_file(f):
     ipcs = []
     br_misp_rates = []
     br_mpkis = []
+    tage_mpkis=[]
+    tage_hit_rates=[]
+    tage_misp_rates=[]
+
 
     while True:
         line = f.readline()
@@ -76,6 +95,9 @@ def parse_file(f):
             ipcs.extend([calc_ipc(last_hpms, hpms)] * 2)
             br_misp_rates.extend([calc_br_misp_rate(last_hpms, hpms)] * 2)
             br_mpkis.extend([calc_br_mpki(last_hpms, hpms)] * 2)
+            tage_mpkis.extend([calc_tage_mpki(last_hpms,hpms)]*2)
+            tage_hit_rates.extend([calc_tage_hit_rate(last_hpms,hpms)]*2)
+            tage_misp_rates.extend([calc_tage_misp_rate(last_hpms,hpms)]*2)
 
         last_hpms = hpms
         lineno += 1
@@ -84,10 +106,17 @@ def parse_file(f):
     ipc_avg = calc_ipc(first_hpms, hpms)
     br_misp_rate_avg = calc_br_misp_rate(first_hpms, hpms)
     br_mpki_avg = calc_br_mpki(first_hpms, hpms)
+    tage_mpkis_avg =calc_tage_mpki(first_hpms,hpms)
+    tage_hit_rate_avg=calc_tage_hit_rate(first_hpms,hpms)
+    tage_misp_rate_avg=calc_tage_misp_rate(first_hpms,hpms)
+    
 
     plot(times, ipcs, ipc_avg, 'IPC')
     plot(times, br_misp_rates, br_misp_rate_avg, 'Br Misp Rate')
     plot(times, br_mpkis, br_mpki_avg, 'Br MPKI')
+    plot(times,tage_mpkis,tage_mpkis_avg,"TAGE MPKI")
+    plot(times,tage_hit_rates,tage_hit_rate_avg,"TAGE Hit Rate")
+    plot(times,tage_misp_rates,tage_misp_rate_avg,"TAGE Misp Rate")
 
 
 if __name__ == '__main__':
