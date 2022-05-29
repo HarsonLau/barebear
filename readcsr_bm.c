@@ -57,13 +57,42 @@ int do_fordfulk();
     printf("\"do_" #f "\": "); \
     print_hpm(b1, b2);
 
+#define QSORT10()\
+    do_qsort();\
+    do_qsort();\
+    do_qsort();\
+    do_qsort();\
+    do_qsort();\
+    do_qsort();\
+    do_qsort();\
+    do_qsort();\
+    do_qsort();\
+    do_qsort()
+
 int main()
 {
     uint64_t b1[16], b2[16];
-
-    printf("begin\n");
-    DO(qsort);
-    DO(matmul);
-    DO(switch);
-    DO(fordfulk);
+#ifdef CSR
+    snapshot_hpm(b1);
+#endif
+    QSORT10();
+    QSORT10();
+    QSORT10();
+    QSORT10();
+    QSORT10();
+/*
+    QSORT10();
+    QSORT10();
+    QSORT10();
+    QSORT10();
+    QSORT10();
+  */
+#ifdef CSR
+    snapshot_hpm(b2);
+    print_hpm(b1, b2);
+#endif
+    
+    //DO(matmul);
+    //DO(switch);
+    //DO(fordfulk);
 }
