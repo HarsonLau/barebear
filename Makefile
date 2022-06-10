@@ -4,7 +4,7 @@ TOOLCHAIN=riscv64-unknown-elf-
 CC=$(TOOLCHAIN)gcc
 CFLAGS=-march=rv64g -mabi=lp64d -mcmodel=medany -I. -O3
 LDFLAGS=-nostdlib -nostartfiles -Tlink.ld -static
-CDEFS=-DPRINTF_DISABLE_SUPPORT_FLOAT
+CDEFS=-DPRINTF_DISABLE_SUPPORT_FLOAT -D CSR
 
 LIBC=$(wildcard lib/*.c)
 SRCS?=$(wildcard src/*.S)
@@ -13,6 +13,7 @@ LIBO=$(addprefix build/, $(LIBC:c=o))
 SRCO=$(addprefix build/, $(SRCS:S=o))
 
 SIM=/home/liuhao/boom_perf_origin/build/simulator-MediumBoomConfig
+
 
 .PHONY: build clean spike_test csr_test print_test test
 
@@ -59,12 +60,14 @@ qsort:$(LIBC) $(BENCHC)  readcsr_bm.c
     -I. -O3 -nostdlib -nostartfiles -Tlink.ld \
     -DPRINTF_DISABLE_SUPPORT_FLOAT -DBAREBEAR_DISABLE_FS \
     -o build/qsort readcsr_bm.c bench/*.c lib/crt.S lib/*.c "
+	podman run -it --rm -v ./:/root/barebear chipyard-slim bash -c "cd /root/barebear && riscv64-unknown-elf-objdump -D build/qsort >build/qsort.dump"
 
 qsort_csr:$(LIBC) $(BENCHC) readcsr_bm.c
 	 podman run -it --rm -v ./:/root/barebear chipyard-slim bash -c "cd /root/barebear && mkdir -p build && riscv64-unknown-elf-gcc -march=rv64g -mabi=lp64 -mcmodel=medany \
     -I. -O3 -nostdlib -nostartfiles -Tlink.ld \
     -DPRINTF_DISABLE_SUPPORT_FLOAT -DBAREBEAR_DISABLE_FS -D CSR\
     -o build/qsort_csr readcsr_bm.c bench/*.c lib/crt.S lib/*.c "
+	podman run -it --rm -v ./:/root/barebear chipyard-slim bash -c "cd /root/barebear && riscv64-unknown-elf-objdump -D build/qsort_csr >build/qsort_csr.dump"
 
 spike_test: qsort
 	 podman run -it --rm -v ./:/root/barebear chipyard-slim bash -c "cd /root/barebear &&spike -l build/qsort 2>&1 | wc -l"

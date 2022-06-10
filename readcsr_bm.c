@@ -75,18 +75,8 @@ int main()
 #ifdef CSR
     snapshot_hpm(b1);
 #endif
-    QSORT10();
-    QSORT10();
-    QSORT10();
-    QSORT10();
-    QSORT10();
-/*
-    QSORT10();
-    QSORT10();
-    QSORT10();
-    QSORT10();
-    QSORT10();
-  */
+    //QSORT10();
+    do_qsort();
 #ifdef CSR
     snapshot_hpm(b2);
     print_hpm(b1, b2);
