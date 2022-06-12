@@ -14,6 +14,7 @@ SRCO=$(addprefix build/, $(SRCS:S=o))
 
 SIM=/home/liuhao/boom_perf_origin/build/simulator-MediumBoomConfig
 
+PODMAN_CSR_CMD= riscv64-unknown-elf-gcc -march=rv64g -mabi=lp64 -mcmodel=medany -I. -O3 -nostdlib -nostartfiles -Tlink.ld -DPRINTF_DISABLE_SUPPORT_FLOAT -DBAREBEAR_DISABLE_FS 
 
 .PHONY: build clean spike_test csr_test print_test test
 
@@ -55,12 +56,27 @@ read_csr:$(LIBC) $(BENCHC) readcsr_bm.c
     -DPRINTF_DISABLE_SUPPORT_FLOAT -DBAREBEAR_DISABLE_FS \
     -o readcsr_bm readcsr_bm.c bench/*.c lib/crt.S lib/*.c "
 
+podman_qsort:$(LIBC) $(BENCHC)  readcsr_bm.c
+	$(PODMAN_CSR_CMD) -o build/qsort readcsr_bm.c bench/*.c lib/crt.S lib/*.c 
+podman_qsort_20:$(LIBC) $(BENCHC)  readcsr_bm_20.c
+	$(PODMAN_CSR_CMD) -o build/qsort_20 readcsr_bm_20.c bench/*.c lib/crt.S lib/*.c
+podman_qsort_30:$(LIBC) $(BENCHC)  readcsr_bm_30.c
+	$(PODMAN_CSR_CMD) -o build/qsort_30 readcsr_bm_30.c bench/*.c lib/crt.S lib/*.c
+podman_qsort_40:$(LIBC) $(BENCHC)  readcsr_bm_40.c
+	$(PODMAN_CSR_CMD) -o build/qsort_40 readcsr_bm_40.c bench/*.c lib/crt.S lib/*.c
+podman_qsort_100:$(LIBC) $(BENCHC)  readcsr_bm_100.c
+	$(PODMAN_CSR_CMD) -o build/qsort_100 readcsr_bm_100.c bench/*.c lib/crt.S lib/*.c
+podman_all_qsort:podman_qsort podman_qsort_20 podman_qsort_30 podman_qsort_40 podman_qsort_100
+	echo "compiling all qsort without reading csr"
 qsort:$(LIBC) $(BENCHC)  readcsr_bm.c
-	 podman run -it --rm -v ./:/root/barebear chipyard-slim bash -c "cd /root/barebear && mkdir -p build && riscv64-unknown-elf-gcc -march=rv64g -mabi=lp64 -mcmodel=medany \
-    -I. -O3 -nostdlib -nostartfiles -Tlink.ld \
-    -DPRINTF_DISABLE_SUPPORT_FLOAT -DBAREBEAR_DISABLE_FS \
-    -o build/qsort readcsr_bm.c bench/*.c lib/crt.S lib/*.c "
+	podman run -it --rm -v ./:/root/barebear chipyard-slim bash -c "cd /root/barebear && mkdir -p build && make podman_all_qsort"
 	podman run -it --rm -v ./:/root/barebear chipyard-slim bash -c "cd /root/barebear && riscv64-unknown-elf-objdump -D build/qsort >build/qsort.dump"
+qsort_twice:$(LIBC) $(BENCHC)  readcsr_bm.c
+	podman run -it --rm -v ./:/root/barebear chipyard-slim bash -c "cd /root/barebear && mkdir -p build && riscv64-unknown-elf-gcc -march=rv64g -mabi=lp64 -mcmodel=medany \
+    -I. -O3 -nostdlib -nostartfiles -Tlink.ld \
+    -DPRINTF_DISABLE_SUPPORT_FLOAT -DBAREBEAR_DISABLE_FS -DTWICE\
+    -o build/qsort_twice readcsr_bm.c bench/*.c lib/crt.S lib/*.c "
+	podman run -it --rm -v ./:/root/barebear chipyard-slim bash -c "cd /root/barebear && riscv64-unknown-elf-objdump -D build/qsort_twice >build/qsort_twice.dump"
 
 qsort_csr:$(LIBC) $(BENCHC) readcsr_bm.c
 	 podman run -it --rm -v ./:/root/barebear chipyard-slim bash -c "cd /root/barebear && mkdir -p build && riscv64-unknown-elf-gcc -march=rv64g -mabi=lp64 -mcmodel=medany \
@@ -69,13 +85,16 @@ qsort_csr:$(LIBC) $(BENCHC) readcsr_bm.c
     -o build/qsort_csr readcsr_bm.c bench/*.c lib/crt.S lib/*.c "
 	podman run -it --rm -v ./:/root/barebear chipyard-slim bash -c "cd /root/barebear && riscv64-unknown-elf-objdump -D build/qsort_csr >build/qsort_csr.dump"
 
-spike_test: qsort
-	 podman run -it --rm -v ./:/root/barebear chipyard-slim bash -c "cd /root/barebear &&spike -l build/qsort 2>&1 | wc -l"
-	 podman run -it --rm -v ./:/root/barebear chipyard-slim bash -c "cd /root/barebear &&spike -l build/qsort 2>&1 | grep jal| wc -l"
+spike_test: qsort qsort_twice
+	 podman run -it --rm -v ./:/root/barebear chipyard-slim bash -c "cd /root/barebear &&spike -l build/qsort 2>output_spike_1.txt"
+	 podman run -it --rm -v ./:/root/barebear chipyard-slim bash -c "cd /root/barebear &&spike -l build/qsort_twice 2>output_spike_2.txt"
 
-print_test: qsort
-	$(SIM) -V build/qsort 2>output.txt 
-	python3 /home/liuhao/boom_perf_origin/util/branch-processor.py output.txt
+print_test: qsort qsort_twice
+	$(SIM) -V build/qsort 2>output_print_1.txt
+	$(SIM) -V build/qsort_twice 2>output_print_2.txt 
+
+delta_test:spike_test print_test
+	python3 delta-processor.py
 
 csr_test: qsort_csr
 	$(SIM) -V build/qsort_csr 2>output_csr.txt 

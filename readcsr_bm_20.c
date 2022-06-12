@@ -76,10 +76,7 @@ int main()
     snapshot_hpm(b1);
 #endif
     QSORT10();
-#ifdef TWICE
     QSORT10();
-
-#endif
 #ifdef CSR
     snapshot_hpm(b2);
     print_hpm(b1, b2);
