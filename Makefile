@@ -102,4 +102,5 @@ csr_test: qsort_csr
 test:spike_test print_test csr_test
 
 run_csr:runcsr.c
-	podman run -it --rm -v ./:/root/barebear chipyard-slim bash -c "cd /root/barebear && riscv64-unknown-linux-gnu-gcc -O3 -o runcsr runcsr.c"
+	podman run -it --rm -v ./:/root/barebear chipyard-slim bash -c "cd /root/barebear && riscv64-unknown-linux-gnu-gcc -O3 -o build/runcsr runcsr.c"
+	podman run -it --rm -v ./:/root/barebear chipyard-slim bash -c "cd /root/barebear && riscv64-unknown-elf-objdump -D build/runcsr >build/runcsr.dump"
